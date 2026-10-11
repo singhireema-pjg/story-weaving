@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word Weaver: Collaborative Story Building Game</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- Google Font: Outfit & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            display: ['"Outfit"', 'sans-serif'],
+          },
+          colors: {
+            story: {
+              purple: '#8b5cf6',
+              amber: '#f59e0b',
+              emerald: '#10b981',
+              rose: '#f43f5e',
+              cyan: '#06b6d4'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    .glass-card {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .story-bubble {
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="h-full font-sans antialiased bg-slate-950 text-slate-100 flex flex-col min-h-screen custom-scrollbar">
+
+  <!-- Header -->
+  <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-30 backdrop-blur-md">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
+      
+      <div class="flex items-center space-x-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-purple-600 via-pink-500 to-amber-400 flex items-center justify-center shadow-lg shadow-purple-500/20">
+          <i data-lucide="book-open-check" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-display text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-300 to-amber-300">
+            STORY WEAVER
+          </h1>
+          <p class="text-xs text-slate-400 font-semibold">1-Sentence Turn-Taking Collaborative Game</p>
+        </div>
+      </div>
+
+      <!-- Mode & Sound Controls -->
+      <div class="flex items-center gap-2">
+        <button id="modeToggleBtn" onclick="togglePartnerMode()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-purple-300 transition flex items-center gap-2 text-xs font-bold border border-slate-700">
+          <i data-lucide="bot" id="modeIcon" class="w-4 h-4 text-purple-400"></i>
+          <span id="modeLabel">Partner: AI Teacher</span>
+        </button>
+
+        <button onclick="restartStory()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-rose-300 transition flex items-center gap-1.5 text-xs font-bold border border-slate-700">
+          <i data-lucide="rotate-ccw" class="w-4 h-4 text-rose-400"></i>
+          <span>New Story</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left Controls & Settings Sidebar (4 cols) -->
+    <section class="lg:col-span-4 space-y-5">
+      
+      <!-- Genre Picker Card -->
+      <div class="glass-card p-5 rounded-3xl space-y-3">
+        <h2 class="text-xs font-black uppercase tracking-wider text-purple-400 flex items-center gap-2">
+          <i data-lucide="sparkles" class="w-4 h-4"></i> Select Story Theme
+        </h2>
+        <div class="grid grid-cols-2 gap-2" id="genreButtons">
+          <button onclick="setGenre('adventure')" id="genre-adventure" class="genre-btn p-3 rounded-2xl bg-purple-500/20 border border-purple-500/40 text-left transition flex items-center gap-2 text-xs font-bold text-purple-200">
+            <i data-lucide="compass" class="w-4 h-4 text-amber-400"></i> Adventure
+          </button>
+          <button onclick="setGenre('horror')" id="genre-horror" class="genre-btn p-3 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-left transition flex items-center gap-2 text-xs font-bold text-slate-400">
+            <i data-lucide="ghost" class="w-4 h-4 text-purple-400"></i> Horror
+          </button>
+          <button onclick="setGenre('action')" id="genre-action" class="genre-btn p-3 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-left transition flex items-center gap-2 text-xs font-bold text-slate-400">
+            <i data-lucide="zap" class="w-4 h-4 text-rose-400"></i> Action
+          </button>
+          <button onclick="setGenre('scifi')" id="genre-scifi" class="genre-btn p-3 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-left transition flex items-center gap-2 text-xs font-bold text-slate-400">
+            <i data-lucide="rocket" class="w-4 h-4 text-cyan-400"></i> Sci-Fi
+          </button>
+        </div>
+      </div>
+
+      <!-- Word Count & Progress Monitor -->
+      <div class="glass-card p-5 rounded-3xl space-y-3 text-center">
+        <span class="text-[11px] font-black uppercase tracking-wider text-slate-400 block">Total Story Word Count</span>
+        <div class="flex items-baseline justify-center gap-1.5">
+          <span id="wordCountDisplay" class="font-display text-5xl font-black text-amber-400">0</span>
+          <span class="text-sm font-bold text-slate-400">/ 150-200 words</span>
+        </div>
+
+        <p id="wordCountHint" class="text-xs text-slate-400 leading-relaxed">
+          Keep building your story! Around 150-200 words, the AI Teacher will help wrap up the grand conclusion.
+        </p>
+      </div>
+
+      <!-- Twist Assistant Box -->
+      <div class="glass-card p-5 rounded-3xl space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+            <i data-lucide="wand-2" class="w-4 h-4"></i> Plot Twist Generator
+          </h3>
+          <button onclick="generateTwist()" class="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 transition">
+            New Twist
+          </button>
+        </div>
+        <div id="twistBox" class="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 italic leading-relaxed">
+          Need a surprise idea? Click "New Twist" to get a wild story event!
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Right Interactive Storyboard (8 cols) -->
+    <section class="lg:col-span-8 flex flex-col space-y-4">
+      
+      <!-- Story Feed Box -->
+      <div class="glass-card p-6 rounded-3xl flex-1 flex flex-col justify-between space-y-4 min-h-[380px]">
+        <div>
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-4">
+            <div class="flex items-center gap-2">
+              <span id="turnBadge" class="px-3 py-1 rounded-full text-xs font-black uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                Student's Turn
+              </span>
+              <span id="genreBadge" class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Theme: Adventure
+              </span>
+            </div>
+            <span id="sentenceCountBadge" class="text-xs font-bold text-slate-500">0 Sentences</span>
+          </div>
+
+          <!-- Sentences List -->
+          <div id="storyContainer" class="space-y-3 max-h-[320px] overflow-y-auto custom-scrollbar pr-2">
+            <!-- Empty state -->
+            <div id="emptyStoryMsg" class="text-center py-12 text-slate-500 space-y-2">
+              <i data-lucide="feather" class="w-10 h-10 mx-auto opacity-40"></i>
+              <p class="text-sm font-semibold">The story hasn't started yet!</p>
+              <p class="text-xs">Type sentence #1 below to kick off the adventure.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Input Box Area -->
+        <div id="inputSection" class="pt-3 border-t border-slate-800/80 space-y-3">
+          <div class="flex items-center justify-between text-xs font-bold text-slate-400">
+            <span id="authorTurnLabel" class="text-cyan-400 flex items-center gap-1.5">
+              <i data-lucide="pen-tool" class="w-3.5 h-3.5"></i> Write 1 Sentence (Student):
+            </span>
+            <span id="inputWordCount" class="text-slate-500">0 words</span>
+          </div>
+
+          <div class="flex gap-2">
+            <textarea id="sentenceInput" rows="2" oninput="updateInputWordCount()" placeholder="Write your sentence here (e.g. 'Leo opened the creaky wooden chest and gasped.')..." class="flex-1 bg-slate-950 border border-slate-800 rounded-2xl p-3 text-xs sm:text-sm text-slate-200 focus:outline-none focus:border-purple-500 transition resize-none"></textarea>
+            
+            <button onclick="submitSentence()" class="px-5 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-500 hover:opacity-95 text-white font-extrabold text-xs sm:text-sm transition flex flex-col items-center justify-center gap-1 shadow-lg shadow-purple-500/20 flex-shrink-0">
+              <i data-lucide="send" class="w-4 h-4"></i>
+              <span>Add</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Story Finished Action Box -->
+        <div id="storyFinishedBox" class="hidden p-4 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 text-center space-y-3">
+          <h3 class="text-base font-black text-emerald-300 flex items-center justify-center gap-2">
+            <i data-lucide="trophy" class="w-5 h-5 text-amber-400"></i> Perfect Story Completed!
+          </h3>
+          <p class="text-xs text-slate-300">
+            You hit the target word limit (50–70 words)! Read your full co-authored masterpiece above.
+          </p>
+          <div class="flex justify-center gap-3 pt-1">
+            <button onclick="copyFullStory()" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs hover:bg-emerald-400 transition flex items-center gap-1.5">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Story
+            </button>
+            <button onclick="restartStory()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-200 hover:bg-slate-700 font-bold text-xs transition">
+              Start New Story
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- JavaScript Game Engine -->
+  <script>
+    let currentGenre = 'adventure';
+    let partnerMode = 'ai'; // 'ai' or 'pass_play'
+    let currentTurn = 'student'; // 'student' or 'teacher'
+    let storySentences = [];
+
+    // Twist Bank per genre
+    const twists = {
+      adventure: [
+        "Suddenly, the ground shook and revealed a hidden trapdoor!",
+        "A glowing compass fell from the sky with a strange map.",
+        "A mysterious shadowy figure stepped out from behind the waterfall.",
+        "The ancient golden coin began to float in mid-air!"
+      ],
+      horror: [
+        "The lights flickered violently and went completely dark.",
+        "A cold whisper echoed through the empty hallway.",
+        "The old portrait on the wall suddenly blinked!",
+        "The door slammed shut behind them and locked on its own."
+      ],
+      action: [
+        "A roaring alarm sounded as red laser beams filled the room!",
+        "Out of nowhere, a high-speed hoverbike skidded to a halt.",
+        "The villain pulled a sparkling crystal from their coat pocket.",
+        "The bridge cable snapped with a loud bang!"
+      ],
+      scifi: [
+        "The alien robot spoke in plain English: 'Greetings, Earthling!'",
+        "A holographic portal opened right in the middle of the room.",
+        "The spaceship controls turned neon pink and started humming.",
+        "Gravity suddenly reversed, floating everything into the air!"
+      ]
+    };
+
+    // AI Teacher Response templates per genre (Standard progress)
+    const aiResponses = {
+      adventure: [
+        "Without hesitation, they grabbed the glowing map and leaped over the ravine.",
+        "A mysterious old compass in their backpack started spinning wildly toward the cave.",
+        "They discovered an ancient stone key hidden beneath the damp moss.",
+        "A sudden gust of wind blew open a secret cavern entrance!"
+      ],
+      horror: [
+        "A soft, chilling laughter echoed down the empty corridor behind them.",
+        "Shadows stretched across the floor even though there was no light source.",
+        "They reached for the rusty doorknob, but it felt ice-cold to the touch.",
+        "The clock on the wall began spinning backwards at double speed!"
+      ],
+      action: [
+        "They quickly ducked behind the shield just as the energy beam hit!",
+        "Grabbing the rope overhead, they swung across the high canyon gap.",
+        "The gadget sparked to life, opening an escape hatch beneath their feet.",
+        "With one swift move, they intercepted the falling secret drive!"
+      ],
+      scifi: [
+        "The starship's AI voice announced that a teleportation beam was locked on.",
+        "Floating crystals in the chamber began emitting a soft, rhythmic melody.",
+        "The strange alien scanner hummed, revealing a secret door in the hull.",
+        "Zero-gravity thrusters kicked in, sending them gliding smoothly forward."
+      ]
+    };
+
+    // Conclusion templates when word count nears 150-200 words
+    const aiConclusions = {
+      adventure: [
+        "With one final leap of courage, they secured the treasure and safely returned home as legendary explorers.",
+        "The ancient temple doors slowly closed behind them as they walked back into the warm sunlight with a smile.",
+        "Holding up the shining artifact, they knew their unforgettable adventure had changed their lives forever."
+      ],
+      horror: [
+        "They bolted out the front doors just as the sunrise shattered the lingering shadows for good.",
+        "Breathing heavily, they slammed the book shut and vowed never to speak of that haunted night again.",
+        "The strange whispers faded into silence as safety finally welcomed them back to the real world."
+      ],
+      action: [
+        "With a triumphant cheer, they activated the master shutdown switch and saved the day just in time.",
+        "The smoke cleared as the heroes stood victorious atop the final barrier, having saved the city.",
+        "Dusting off their gear, they high-fived as backup arrived to secure the victory."
+      ],
+      scifi: [
+        "The warp drive hummed peacefully as their ship jumped into hyperspace, heading happily back to Earth.",
+        "With a friendly wave from their new alien allies, they set coordinates for home.",
+        "The holographic display flashed 'Mission Complete' as they drifted smoothly into orbit."
+      ]
+    };
+
+    function setGenre(genre) {
+      currentGenre = genre;
+      
+      document.querySelectorAll('.genre-btn').forEach(btn => {
+        btn.className = "genre-btn p-3 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-left transition flex items-center gap-2 text-xs font-bold text-slate-400";
+      });
+
+      const activeBtn = document.getElementById(`genre-${genre}`);
+      const colorMap = {
+        adventure: 'purple',
+        horror: 'slate',
+        action: 'rose',
+        scifi: 'cyan'
+      };
+
+      activeBtn.className = `genre-btn p-3 rounded-2xl bg-${colorMap[genre]}-500/20 border border-${colorMap[genre]}-500/40 text-left transition flex items-center gap-2 text-xs font-bold text-${colorMap[genre]}-200`;
+
+      document.getElementById('genreBadge').innerText = `Theme: ${genre.toUpperCase()}`;
+      generateTwist();
+    }
+
+    function togglePartnerMode() {
+      if (partnerMode === 'ai') {
+        partnerMode = 'pass_play';
+        document.getElementById('modeIcon').setAttribute('data-lucide', 'users');
+        document.getElementById('modeLabel').innerText = "Partner: Human Teacher";
+      } else {
+        partnerMode = 'ai';
+        document.getElementById('modeIcon').setAttribute('data-lucide', 'bot');
+        document.getElementById('modeLabel').innerText = "Partner: AI Teacher";
+      }
+      updateTurnUI();
+      lucide.createIcons();
+    }
+
+    function generateTwist() {
+      const list = twists[currentGenre];
+      const randomTwist = list[Math.floor(Math.random() * list.length)];
+      document.getElementById('twistBox').innerText = `"${randomTwist}"`;
+    }
+
+    function countWords(str) {
+      return str.trim().split(/\s+/).filter(w => w.length > 0).length;
+    }
+
+    function updateInputWordCount() {
+      const text = document.getElementById('sentenceInput').value;
+      const count = countWords(text);
+      document.getElementById('inputWordCount').innerText = `${count} words`;
+    }
+
+    function getTotalWords() {
+      return storySentences.reduce((sum, item) => sum + item.words, 0);
+    }
+
+    function updateTurnUI() {
+      const turnBadge = document.getElementById('turnBadge');
+      const authorTurnLabel = document.getElementById('authorTurnLabel');
+
+      if (currentTurn === 'student') {
+        turnBadge.innerText = "Student's Turn";
+        turnBadge.className = "px-3 py-1 rounded-full text-xs font-black uppercase bg-purple-500/20 text-purple-300 border border-purple-500/30";
+        authorTurnLabel.innerHTML = `<i data-lucide="pen-tool" class="w-3.5 h-3.5"></i> Write 1 Sentence (Student):`;
+      } else {
+        const title = partnerMode === 'ai' ? 'AI Teacher Thinking...' : "Teacher's Turn";
+        turnBadge.innerText = title;
+        turnBadge.className = "px-3 py-1 rounded-full text-xs font-black uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30";
+        authorTurnLabel.innerHTML = `<i data-lucide="pen-tool" class="w-3.5 h-3.5"></i> Write 1 Sentence (${partnerMode === 'ai' ? 'AI Teacher' : 'Teacher'}):`;
+      }
+      lucide.createIcons();
+    }
+
+    function renderStory() {
+      const container = document.getElementById('storyContainer');
+      const emptyMsg = document.getElementById('emptyStoryMsg');
+
+      if (storySentences.length === 0) {
+        if (emptyMsg) {
+          emptyMsg.classList.remove('hidden');
+        } else {
+          container.innerHTML = `
+            <div id="emptyStoryMsg" class="text-center py-12 text-slate-500 space-y-2">
+              <i data-lucide="feather" class="w-10 h-10 mx-auto opacity-40"></i>
+              <p class="text-sm font-semibold">The story hasn't started yet!</p>
+              <p class="text-xs">Type sentence #1 below to kick off the adventure.</p>
+            </div>
+          `;
+        }
+      } else {
+        container.innerHTML = '';
+
+        storySentences.forEach((item, idx) => {
+          const isStudent = item.author === 'Student';
+          const bubble = document.createElement('div');
+          
+          bubble.className = `story-bubble p-4 rounded-2xl border ${
+            isStudent 
+              ? 'bg-purple-950/30 border-purple-500/30 text-purple-100' 
+              : 'bg-amber-950/30 border-amber-500/30 text-amber-100'
+          } flex flex-col gap-1.5`;
+
+          bubble.innerHTML = `
+            <div class="flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wider">
+              <span class="${isStudent ? 'text-purple-400' : 'text-amber-400'} flex items-center gap-1.5">
+                <i data-lucide="${isStudent ? 'user' : 'bot'}" class="w-3.5 h-3.5"></i>
+                Sentence #${idx + 1} (${item.author})
+              </span>
+              <span class="text-slate-500 font-mono">${item.words} words</span>
+            </div>
+            <p class="text-xs sm:text-sm leading-relaxed font-medium">"${item.text}"</p>
+          `;
+
+          container.appendChild(bubble);
+        });
+      }
+
+      // Update total stats
+      const totalWords = getTotalWords();
+      document.getElementById('wordCountDisplay').innerText = totalWords;
+      document.getElementById('sentenceCountBadge').innerText = `${storySentences.length} Sentences`;
+
+      container.scrollTop = container.scrollHeight;
+      lucide.createIcons();
+
+      // Check if total words reach 150-200 words threshold
+      if (totalWords >= 150) {
+        triggerStoryCompletion();
+      }
+    }
+
+    function submitSentence() {
+      const input = document.getElementById('sentenceInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const wordCount = countWords(text);
+
+      storySentences.push({
+        author: currentTurn === 'student' ? 'Student' : (partnerMode === 'ai' ? 'AI Teacher' : 'Teacher'),
+        text: text,
+        words: wordCount
+      });
+
+      input.value = '';
+      updateInputWordCount();
+
+      // Check if student submission pushed us past 150 words
+      if (getTotalWords() >= 150) {
+        renderStory();
+        return;
+      }
+
+      // Alternate turn
+      currentTurn = currentTurn === 'student' ? 'teacher' : 'student';
+      updateTurnUI();
+      renderStory();
+
+      // Trigger AI turn if applicable
+      if (currentTurn === 'teacher' && partnerMode === 'ai') {
+        setTimeout(triggerAiTurn, 1000);
+      }
+    }
+
+    function triggerAiTurn() {
+      // Check if we are approaching 150 words, if so use conclusion sentences
+      const currentTotal = getTotalWords();
+      let responseText = "";
+
+      if (currentTotal >= 130) {
+        const conclusions = aiConclusions[currentGenre];
+        responseText = conclusions[Math.floor(Math.random() * conclusions.length)];
+      } else {
+        const responses = aiResponses[currentGenre];
+        responseText = responses[Math.floor(Math.random() * responses.length)];
+      }
+
+      storySentences.push({
+        author: partnerMode === 'ai' ? 'AI Teacher' : 'Teacher',
+        text: responseText,
+        words: countWords(responseText)
+      });
+
+      currentTurn = 'student';
+      updateTurnUI();
+      renderStory();
+    }
+
+    function triggerStoryCompletion() {
+      document.getElementById('inputSection').classList.add('hidden');
+      document.getElementById('storyFinishedBox').classList.remove('hidden');
+      document.getElementById('turnBadge').innerText = "Story Completed!";
+      document.getElementById('turnBadge').className = "px-3 py-1 rounded-full text-xs font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+      
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      }
+    }
+
+    function copyFullStory() {
+      const fullText = storySentences.map(s => s.text).join(' ');
+      
+      const tempInput = document.createElement('textarea');
+      tempInput.value = fullText;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+
+      const finishBox = document.getElementById('storyFinishedBox');
+      const origMsg = finishBox.querySelector('p').innerText;
+      finishBox.querySelector('p').innerText = "Copied full story to clipboard!";
+      setTimeout(() => {
+        finishBox.querySelector('p').innerText = origMsg;
+      }, 2000);
+    }
+
+    function restartStory() {
+      storySentences = [];
+      currentTurn = 'student';
+      document.getElementById('inputSection').classList.remove('hidden');
+      document.getElementById('storyFinishedBox').classList.add('hidden');
+      document.getElementById('sentenceInput').value = '';
+      updateInputWordCount();
+      updateTurnUI();
+      renderStory();
+      generateTwist();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      generateTwist();
+      updateTurnUI();
+      renderStory();
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
